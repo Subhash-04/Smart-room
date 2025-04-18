@@ -1,0 +1,1908 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Room IoT Command Center</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Orbitron:wght@400;500;600;700&family=Inter:wght@200;300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Three.js for 3D visualization -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  
+  <!-- GLTFLoader for 3D models -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.min.js"></script>
+  
+  <!-- OrbitControls for camera control -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.min.js"></script>
+  
+  <!-- Chart.js for interactive charts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <!-- Luxon for datetime handling -->
+  <script src="https://cdn.jsdelivr.net/npm/luxon@2.3.0/build/global/luxon.min.js"></script>
+  
+  <!-- Icons -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/umd/lucide.min.js"></script>
+  
+  <style>
+    /* Custom Styles */
+    :root {
+      --primary: #0ea5e9;
+      --primary-glow: #0ea5e950;
+      --secondary: #a855f7;
+      --secondary-glow: #a855f740;
+      --accent: #f43f5e;
+      --accent-glow: #f43f5e40;
+      --background: #0f172a;
+      --card-bg: #1e293b;
+      --card-border: #334155;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --text: #f8fafc;
+      --text-secondary: #94a3b8;
+      --grid-line: #334155;
+      --grid-dot: #1e293b;
+    }
+    
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', sans-serif;
+      background-color: var(--background);
+      color: var(--text);
+      overflow-x: hidden;
+      position: relative;
+    }
+    
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: 
+        radial-gradient(circle at 10% 10%, var(--primary-glow), transparent 25%),
+        radial-gradient(circle at 90% 90%, var(--secondary-glow), transparent 25%);
+      z-index: -1;
+      opacity: 0.3;
+    }
+    
+    .dashboard-title {
+      font-family: 'Orbitron', sans-serif;
+    }
+    
+    .card-title {
+      font-family: 'Rajdhani', sans-serif;
+    }
+    
+    .card {
+      background-color: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 0.75rem;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .card:hover {
+      box-shadow: 0 0 30px var(--primary-glow);
+      transform: translateY(-2px);
+    }
+    
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+      background: linear-gradient(to bottom, var(--primary), var(--secondary));
+      z-index: 1;
+    }
+    
+    .card-value {
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 700;
+    }
+    
+    .grid-background {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background:
+        linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
+      background-size: 50px 50px;
+      z-index: -1;
+      opacity: 0.05;
+    }
+    
+    .dot-grid {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: radial-gradient(var(--grid-dot) 1px, transparent 1px);
+      background-size: 20px 20px;
+      z-index: -1;
+      opacity: 0.05;
+    }
+    
+    .glow-effect {
+      position: relative;
+    }
+    
+    .glow-effect::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border-radius: inherit;
+      box-shadow: 0 0 20px var(--primary-glow);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      z-index: -1;
+    }
+    
+    .glow-effect:hover::after {
+      opacity: 1;
+    }
+    
+    /* Status Pills */
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-weight: 600;
+      font-size: 0.75rem;
+      line-height: 1rem;
+    }
+    
+    .status-active {
+      background-color: var(--success);
+      color: white;
+    }
+    
+    .status-inactive {
+      background-color: var(--text-secondary);
+      color: var(--card-bg);
+    }
+    
+    .status-warning {
+      background-color: var(--warning);
+      color: white;
+    }
+    
+    .status-danger {
+      background-color: var(--danger);
+      color: white;
+    }
+    
+    .status-success {
+      background-color: var(--success);
+      color: white;
+    }
+    
+    /* Progress Bar */
+    .progress-bar {
+      height: 8px;
+      border-radius: 4px;
+      overflow: hidden;
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    .progress-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.5s ease;
+    }
+    
+    /* Shimmer Loading Effect */
+    .shimmer {
+      background: linear-gradient(
+        to right,
+        rgba(255, 255, 255, 0.05) 0%,
+        rgba(255, 255, 255, 0.1) 20%,
+        rgba(255, 255, 255, 0.05) 40%
+      );
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite linear;
+    }
+    
+    @keyframes shimmer {
+      0% {
+        background-position: -100% 0;
+      }
+      100% {
+        background-position: 100% 0;
+      }
+    }
+    
+    /* 3D Visualization Container */
+    #room-3d-container {
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+      position: relative;
+      overflow: hidden;
+      border-radius: 0.5rem;
+    }
+    
+    /* Loading Indicator */
+    .spinner {
+      border: 4px solid rgba(255, 255, 255, 0.1);
+      border-radius: 50%;
+      border-top: 4px solid var(--primary);
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    
+    ::-webkit-scrollbar-track {
+      background: var(--card-bg);
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: var(--text-secondary);
+      border-radius: 4px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--primary);
+    }
+    
+    /* Notification Toast */
+    .toast {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      padding: 1rem;
+      background-color: var(--card-bg);
+      border-left: 4px solid var(--primary);
+      border-radius: 0.5rem;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      z-index: 9999;
+      animation: slideIn 0.3s ease forwards;
+    }
+    
+    @keyframes slideIn {
+      from {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+    
+    /* Glassmorphism effect */
+    .glass {
+      background: rgba(30, 41, 59, 0.7);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    /* Cyber Theme Components */
+    .cyber-line {
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--primary), transparent);
+      margin: 1rem 0;
+      width: 100%;
+    }
+    
+    .interactive-button {
+      padding: 0.5rem 1rem;
+      border-radius: 0.375rem;
+      background-color: rgba(14, 165, 233, 0.2);
+      border: 1px solid var(--primary);
+      color: var(--primary);
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .interactive-button:hover {
+      background-color: var(--primary);
+      color: white;
+      box-shadow: 0 0 15px var(--primary-glow);
+    }
+    
+    .interactive-button::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.2),
+        transparent
+      );
+      transition: all 0.5s ease;
+    }
+    
+    .interactive-button:hover::before {
+      left: 100%;
+    }
+    
+    /* Mobile Menu */
+    .mobile-menu {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background-color: var(--card-bg);
+      border-top: 1px solid var(--card-border);
+      padding: 0.5rem;
+      display: flex;
+      justify-content: space-around;
+      z-index: 1000;
+    }
+    
+    .mobile-menu-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0.5rem;
+      color: var(--text-secondary);
+      transition: color 0.3s ease;
+      font-size: 0.75rem;
+    }
+    
+    .mobile-menu-item.active {
+      color: var(--primary);
+    }
+    
+    /* Media Queries */
+    @media (max-width: 640px) {
+      .card-value {
+        font-size: 1.5rem;
+      }
+      
+      .main-content {
+        padding-bottom: 5rem; /* Space for mobile menu */
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Background Effects -->
+  <div class="grid-background"></div>
+  <div class="dot-grid"></div>
+  
+  <!-- Loading Overlay -->
+  <div id="loading-overlay" class="fixed inset-0 bg-slate-900 bg-opacity-90 flex items-center justify-center z-50">
+    <div class="text-center">
+      <div class="spinner mx-auto mb-4"></div>
+      <div class="dashboard-title text-xl mb-2">SMART ROOM</div>
+      <div class="text-cyan-500 text-sm" id="loading-status">Initializing dashboard...</div>
+    </div>
+  </div>
+  
+  <!-- Error Overlay -->
+  <div id="error-overlay" class="fixed inset-0 bg-slate-900 bg-opacity-90 flex items-center justify-center z-50 hidden">
+    <div class="text-center max-w-md mx-auto p-6 bg-slate-800 rounded-lg border border-red-500">
+      <div class="text-red-500 mb-4">
+        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mx-auto">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12" y2="16"></line>
+        </svg>
+      </div>
+      <h2 class="text-xl font-bold mb-2">Connection Error</h2>
+      <p id="error-message" class="mb-4 text-slate-300">Failed to connect to ThingSpeak API.</p>
+      <button id="retry-button" class="interactive-button w-full">
+        Try Again
+      </button>
+    </div>
+  </div>
+  
+  <!-- Main Container -->
+  <div class="container mx-auto px-4 py-8 main-content">
+    <!-- Header -->
+    <header class="mb-8">
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
+        <div>
+          <h1 class="dashboard-title text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-500 to-purple-500">
+            SMART ROOM COMMAND CENTER
+          </h1>
+          <p class="text-slate-400 mt-1">Real-time monitoring and control system</p>
+        </div>
+        
+        <div class="mt-4 md:mt-0 flex items-center gap-4">
+          <div id="connection-status" class="status-pill status-inactive">
+            <span class="inline-block w-2 h-2 rounded-full bg-white mr-2"></span>
+            Disconnected
+          </div>
+          
+          <div class="flex items-center bg-slate-800 px-3 py-2 rounded-lg">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2 text-cyan-500">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            <span id="current-time" class="font-mono text-white">00:00:00</span>
+          </div>
+          
+          <button id="refresh-button" class="interactive-button">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2 inline-block">
+              <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+              <path d="M3 3v5h5"></path>
+              <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"></path>
+              <path d="M16 21h5v-5"></path>
+            </svg>
+            Refresh
+          </button>
+        </div>
+      </div>
+      
+      <div class="cyber-line"></div>
+    </header>
+    
+    <!-- Last Updated Info -->
+    <div class="flex justify-end mb-6">
+      <div class="text-slate-400 text-sm flex items-center">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <polyline points="12 6 12 12 16 14"></polyline>
+        </svg>
+        Last updated: <span id="last-updated" class="ml-1 font-mono">Never</span>
+      </div>
+    </div>
+    
+    <!-- Main Dashboard Content -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+      <!-- Temperature Card -->
+      <div class="card p-6 glow-effect">
+        <div class="flex justify-between items-start mb-4">
+          <div>
+            <h3 class="card-title text-xl font-semibold text-cyan-500">Temperature</h3>
+            <p class="text-slate-400 text-sm">Current reading</p>
+          </div>
+          <div class="p-2 rounded-lg bg-sky-900 text-cyan-400">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z"></path>
+            </svg>
+          </div>
+        </div>
+        
+        <div class="mb-2">
+          <div class="flex items-end">
+            <div id="temperature-value" class="card-value text-4xl mr-2">--</div>
+            <div class="text-slate-400">°C</div>
+          </div>
+        </div>
+        
+        <div class="progress-bar">
+          <div id="temperature-bar" class="progress-fill bg-gradient-to-r from-cyan-500 to-blue-600" style="width: 0%;"></div>
+        </div>
+        
+        <div class="flex justify-between text-xs text-slate-500 mt-1">
+          <span>0°C</span>
+          <span>50°C</span>
+        </div>
+      </div>
+      
+      <!-- Humidity Card -->
+      <div class="card p-6 glow-effect">
+        <div class="flex justify-between items-start mb-4">
+          <div>
+            <h3 class="card-title text-xl font-semibold text-blue-500">Humidity</h3>
+            <p class="text-slate-400 text-sm">Current reading</p>
+          </div>
+          <div class="p-2 rounded-lg bg-blue-900 text-blue-400">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path>
+            </svg>
+          </div>
+        </div>
+        
+        <div class="mb-2">
+          <div class="flex items-end">
+            <div id="humidity-value" class="card-value text-4xl mr-2">--</div>
+            <div class="text-slate-400">%</div>
+          </div>
+        </div>
+        
+        <div class="progress-bar">
+          <div id="humidity-bar" class="progress-fill bg-gradient-to-r from-blue-400 to-indigo-600" style="width: 0%;"></div>
+        </div>
+        
+        <div class="flex justify-between text-xs text-slate-500 mt-1">
+          <span>0%</span>
+          <span>100%</span>
+        </div>
+      </div>
+      
+      <!-- Air Quality Card -->
+      <div class="card p-6 glow-effect">
+        <div class="flex justify-between items-start mb-4">
+          <div>
+            <h3 class="card-title text-xl font-semibold text-emerald-500">Air Quality</h3>
+            <p class="text-slate-400 text-sm">Current reading</p>
+          </div>
+          <div id="air-quality-icon" class="p-2 rounded-lg bg-emerald-900 text-emerald-400">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M8 2h8"></path>
+              <path d="M9 2v2.789a4 4 0 0 1-.672 2.219l-.656.984A4 4 0 0 0 7 10.212V20a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-9.789a4 4 0 0 0-.672-2.219l-.656-.984A4 4 0 0 1 15 4.788V2"></path>
+              <path d="M7 15h10"></path>
+            </svg>
+          </div>
+        </div>
+        
+        <div class="mb-2">
+          <div class="flex items-end">
+            <div id="air-quality-value" class="card-value text-4xl mr-2">--</div>
+            <div class="text-slate-400">AQI</div>
+          </div>
+          <div id="air-quality-status" class="status-pill status-success mt-2">Good</div>
+        </div>
+        
+        <div class="progress-bar">
+          <div id="air-quality-bar" class="progress-fill bg-gradient-to-r from-emerald-400 to-emerald-600" style="width: 0%;"></div>
+        </div>
+        
+        <div class="flex justify-between text-xs text-slate-500 mt-1">
+          <span>Good</span>
+          <span>Bad</span>
+        </div>
+      </div>
+      
+      <!-- Motion Status Card -->
+      <div class="card p-6 glow-effect">
+        <div class="flex justify-between items-start mb-4">
+          <div>
+            <h3 class="card-title text-xl font-semibold text-purple-500">Motion Status</h3>
+            <p class="text-slate-400 text-sm">Room occupancy</p>
+          </div>
+          <div id="motion-icon" class="p-2 rounded-lg bg-purple-900 text-purple-400">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path>
+              <circle cx="12" cy="13" r="3"></circle>
+            </svg>
+          </div>
+        </div>
+        
+        <div class="mb-2">
+          <div id="motion-value" class="card-value text-4xl mb-2">--</div>
+          <div id="motion-status" class="status-pill status-inactive">No Motion</div>
+        </div>
+        
+        <div class="mt-4 text-sm text-slate-400">
+          <div class="flex justify-between mb-1">
+            <span>Last motion detected:</span>
+            <span id="last-motion-time" class="font-mono">--:--:--</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Secondary Row - RFID & Room Control -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+      <!-- RFID Status Card -->
+      <div class="card p-6 glow-effect">
+        <div class="flex justify-between items-start mb-4">
+          <div>
+            <h3 class="card-title text-xl font-semibold text-amber-500">RFID Access</h3>
+            <p class="text-slate-400 text-sm">Security status</p>
+          </div>
+          <div class="p-2 rounded-lg bg-amber-900 text-amber-400">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+          </div>
+        </div>
+        
+        <div class="mb-2">
+          <div id="access-status" class="card-value text-xl mb-2">No Access</div>
+          <div id="rfid-tag" class="font-mono text-sm bg-slate-800 p-2 rounded border border-slate-700 overflow-hidden text-ellipsis">
+            No RFID tag detected
+          </div>
+        </div>
+        
+        <div class="cyber-line my-3"></div>
+        
+        <div class="text-sm text-slate-400">
+          <div class="flex justify-between mb-1">
+            <span>Last authorized:</span>
+            <span id="last-auth-time" class="font-mono">--:--:--</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 3D Room Visualization -->
+      <div class="card p-0 glow-effect lg:col-span-2">
+        <div class="p-4 border-b border-slate-700">
+          <h3 class="card-title text-xl font-semibold text-cyan-500">Room Visualization</h3>
+        </div>
+        
+        <div class="relative">
+          <div id="room-3d-container" style="height: 300px;"></div>
+          
+          <div class="absolute bottom-4 right-4 flex gap-2">
+            <button id="rotate-left-btn" class="interactive-button py-1 px-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 18 L15 12 L9 6"></path>
+              </svg>
+            </button>
+            <button id="rotate-right-btn" class="interactive-button py-1 px-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform: rotate(180deg)">
+                <path d="M9 18 L15 12 L9 6"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Data Charts -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+      <!-- Temperature History Card -->
+      <div class="card p-6 glow-effect">
+        <div class="flex justify-between items-start mb-4">
+          <div>
+            <h3 class="card-title text-xl font-semibold text-cyan-500">Temperature History</h3>
+            <p class="text-slate-400 text-sm">Last 24 hours</p>
+          </div>
+          <button id="temperature-history-btn" class="interactive-button py-1 px-2 text-xs">
+            View Details
+          </button>
+        </div>
+        
+        <div style="height: 200px;">
+          <canvas id="temperature-chart"></canvas>
+        </div>
+      </div>
+      
+      <!-- Humidity History Card -->
+      <div class="card p-6 glow-effect">
+        <div class="flex justify-between items-start mb-4">
+          <div>
+            <h3 class="card-title text-xl font-semibold text-blue-500">Humidity History</h3>
+            <p class="text-slate-400 text-sm">Last 24 hours</p>
+          </div>
+          <button id="humidity-history-btn" class="interactive-button py-1 px-2 text-xs">
+            View Details
+          </button>
+        </div>
+        
+        <div style="height: 200px;">
+          <canvas id="humidity-chart"></canvas>
+        </div>
+      </div>
+      
+      <!-- Air Quality History Card -->
+      <div class="card p-6 glow-effect">
+        <div class="flex justify-between items-start mb-4">
+          <div>
+            <h3 class="card-title text-xl font-semibold text-emerald-500">Air Quality History</h3>
+            <p class="text-slate-400 text-sm">Last 24 hours</p>
+          </div>
+          <button id="air-quality-history-btn" class="interactive-button py-1 px-2 text-xs">
+            View Details
+          </button>
+        </div>
+        
+        <div style="height: 200px;">
+          <canvas id="air-quality-chart"></canvas>
+        </div>
+      </div>
+    </div>
+    
+    <!-- System Status & Logs -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
+      <!-- System Status Card -->
+      <div class="card p-6 glow-effect">
+        <div class="flex justify-between items-start mb-4">
+          <div>
+            <h3 class="card-title text-xl font-semibold text-pink-500">System Status</h3>
+            <p class="text-slate-400 text-sm">Channel information</p>
+          </div>
+          <div class="p-2 rounded-lg bg-pink-900 text-pink-400">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
+              <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+              <line x1="6" y1="6" x2="6.01" y2="6"></line>
+              <line x1="6" y1="18" x2="6.01" y2="18"></line>
+            </svg>
+          </div>
+        </div>
+        
+        <div class="space-y-4">
+          <div class="flex justify-between items-center pb-2 border-b border-slate-700">
+            <span class="text-slate-400">Channel ID</span>
+            <span id="channel-id" class="font-mono">2860772</span>
+          </div>
+          
+          <div class="flex justify-between items-center pb-2 border-b border-slate-700">
+            <span class="text-slate-400">Entry ID</span>
+            <span id="entry-id" class="font-mono">--</span>
+          </div>
+          
+          <div class="flex justify-between items-center pb-2 border-b border-slate-700">
+            <span class="text-slate-400">Created At</span>
+            <span id="created-at" class="font-mono">--</span>
+          </div>
+          
+          <div class="flex justify-between items-center">
+            <span class="text-slate-400">API Status</span>
+            <span id="api-status" class="status-pill status-inactive">Checking...</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Event Logs -->
+      <div class="card p-6 glow-effect lg:col-span-2">
+        <div class="flex justify-between items-center mb-4">
+          <div>
+            <h3 class="card-title text-xl font-semibold text-purple-500">Event Logs</h3>
+            <p class="text-slate-400 text-sm">Recent system events</p>
+          </div>
+          <button id="clear-logs-btn" class="interactive-button py-1 px-2 text-xs">
+            Clear Logs
+          </button>
+        </div>
+        
+        <div id="event-logs" class="h-48 overflow-y-auto bg-slate-800 rounded p-3 font-mono text-sm">
+          <div class="text-emerald-400">[System] Initializing Smart Room dashboard...</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Mobile Menu (visible on small screens) -->
+    <div class="mobile-menu lg:hidden">
+      <a href="#dashboard" class="mobile-menu-item active" data-section="dashboard">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mb-1">
+          <rect x="3" y="3" width="7" height="7"></rect>
+          <rect x="14" y="3" width="7" height="7"></rect>
+          <rect x="14" y="14" width="7" height="7"></rect>
+          <rect x="3" y="14" width="7" height="7"></rect>
+        </svg>
+        Dashboard
+      </a>
+      <a href="#charts" class="mobile-menu-item" data-section="charts">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mb-1">
+          <line x1="12" y1="20" x2="12" y2="10"></line>
+          <line x1="18" y1="20" x2="18" y2="4"></line>
+          <line x1="6" y1="20" x2="6" y2="16"></line>
+        </svg>
+        Charts
+      </a>
+      <a href="#visualization" class="mobile-menu-item" data-section="visualization">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mb-1">
+          <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+          <polyline points="2 17 12 22 22 17"></polyline>
+          <polyline points="2 12 12 17 22 12"></polyline>
+        </svg>
+        3D View
+      </a>
+      <a href="#logs" class="mobile-menu-item" data-section="logs">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mb-1">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="16" y1="13" x2="8" y2="13"></line>
+          <line x1="16" y1="17" x2="8" y2="17"></line>
+          <polyline points="10 9 9 9 8 9"></polyline>
+        </svg>
+        Logs
+      </a>
+    </div>
+    
+    <!-- Footer -->
+    <footer class="text-center text-slate-500 text-sm mt-8 pt-4 border-t border-slate-800">
+      <p>Smart Room IoT Project</p>
+    </footer>
+  </div>
+  
+  <!-- Script -->
+  <script>
+    // ============================================================
+    // Main Application
+    // ============================================================
+    
+    // App State
+    const state = {
+      loading: true,
+      error: null,
+      data: null,
+      historicalData: [],
+      lastUpdated: null,
+      refreshing: false,
+      lastMotion: null,
+      lastAuth: null,
+      roomRotation: 0,
+      // Chart instances
+      temperatureChart: null,
+      humidityChart: null,
+      airQualityChart: null,
+      // 3D objects
+      scene: null,
+      camera: null,
+      renderer: null,
+      room: null,
+      controls: null
+    };
+    
+    // API Configuration
+    const API = {
+      BASE_URL: "https://api.thingspeak.com",
+      CHANNEL_ID: "2860772",
+      READ_API_KEY: "Z8Z2OILN6VVMY6GJ",
+      ENDPOINTS: {
+        LAST_ENTRY: "/channels/2860772/feeds/last.json?api_key=Z8Z2OILN6VVMY6GJ",
+        FEED: "/channels/2860772/feeds.json?api_key=Z8Z2OILN6VVMY6GJ&results=10",
+        STATUS: "/channels/2860772/status.json?api_key=Z8Z2OILN6VVMY6GJ"
+      }
+    };
+    
+    // DOM Elements
+    const elements = {
+      loadingOverlay: document.getElementById('loading-overlay'),
+      loadingStatus: document.getElementById('loading-status'),
+      errorOverlay: document.getElementById('error-overlay'),
+      errorMessage: document.getElementById('error-message'),
+      retryButton: document.getElementById('retry-button'),
+      currentTime: document.getElementById('current-time'),
+      lastUpdated: document.getElementById('last-updated'),
+      refreshButton: document.getElementById('refresh-button'),
+      connectionStatus: document.getElementById('connection-status'),
+      
+      // Sensor values
+      temperatureValue: document.getElementById('temperature-value'),
+      temperatureBar: document.getElementById('temperature-bar'),
+      humidityValue: document.getElementById('humidity-value'),
+      humidityBar: document.getElementById('humidity-bar'),
+      airQualityValue: document.getElementById('air-quality-value'),
+      airQualityBar: document.getElementById('air-quality-bar'),
+      airQualityStatus: document.getElementById('air-quality-status'),
+      airQualityIcon: document.getElementById('air-quality-icon'),
+      motionValue: document.getElementById('motion-value'),
+      motionStatus: document.getElementById('motion-status'),
+      motionIcon: document.getElementById('motion-icon'),
+      lastMotionTime: document.getElementById('last-motion-time'),
+      
+      // RFID & Access
+      accessStatus: document.getElementById('access-status'),
+      rfidTag: document.getElementById('rfid-tag'),
+      lastAuthTime: document.getElementById('last-auth-time'),
+      
+      // System status
+      channelId: document.getElementById('channel-id'),
+      entryId: document.getElementById('entry-id'),
+      createdAt: document.getElementById('created-at'),
+      apiStatus: document.getElementById('api-status'),
+      
+      // Charts & 3D
+      temperatureChart: document.getElementById('temperature-chart'),
+      humidityChart: document.getElementById('humidity-chart'),
+      airQualityChart: document.getElementById('air-quality-chart'),
+      roomContainer: document.getElementById('room-3d-container'),
+      rotateLeftBtn: document.getElementById('rotate-left-btn'),
+      rotateRightBtn: document.getElementById('rotate-right-btn'),
+      
+      // Logs
+      eventLogs: document.getElementById('event-logs'),
+      clearLogsBtn: document.getElementById('clear-logs-btn'),
+      
+      // Mobile menu
+      mobileMenuItems: document.querySelectorAll('.mobile-menu-item')
+    };
+    
+    // ============================================================
+    // API Functions
+    // ============================================================
+    
+    // Fetch data from ThingSpeak API
+    async function fetchData() {
+      try {
+        // Update UI state for fetching
+        state.refreshing = true;
+        updateRefreshButton();
+        addLogEntry("Fetching latest data from ThingSpeak...", "info");
+        
+        // Fetch the latest entry
+        const response = await fetch(`${API.BASE_URL}${API.ENDPOINTS.LAST_ENTRY}`);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        // Add notification if there's previous data and values have changed
+        if (state.data) {
+          // Check for changes in values
+          if (state.data.field4 !== result.field4) {
+            const newStatus = parseInt(result.field4) === 1 ? 'Motion Detected' : 'No Motion';
+            addLogEntry(`Motion status changed: ${newStatus}`, "warning");
+            state.lastMotion = new Date();
+          }
+          
+          // Check for RFID changes
+          if (state.data.field5 !== result.field5 && result.field5) {
+            addLogEntry(`New RFID tag detected: ${result.field5}`, "success");
+            state.lastAuth = new Date();
+          }
+        }
+        
+        // Save the data
+        state.data = result;
+        
+        // Add to historical data 
+        state.historicalData.unshift(result);
+        if (state.historicalData.length > 20) {
+          state.historicalData = state.historicalData.slice(0, 20);
+        }
+        
+        // Update API status
+        await checkApiStatus();
+        
+        // Mark as no longer loading
+        state.loading = false;
+        state.refreshing = false;
+        state.lastUpdated = new Date();
+        
+        // Hide loading overlay
+        elements.loadingOverlay.classList.add('hidden');
+        
+        // Update UI with the new data
+        updateUI();
+        
+        // Update connection status
+        updateConnectionStatus(true);
+        
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        state.error = error.message;
+        
+        // Show error overlay
+        elements.errorMessage.textContent = `Failed to fetch data: ${error.message}`;
+        elements.errorOverlay.classList.remove('hidden');
+        
+        // Update connection status
+        updateConnectionStatus(false);
+        
+        // Log error
+        addLogEntry(`Error fetching data: ${error.message}`, "error");
+        
+        state.refreshing = false;
+        updateRefreshButton();
+      }
+    }
+    
+    // Check API status
+    async function checkApiStatus() {
+      try {
+        const response = await fetch(`${API.BASE_URL}${API.ENDPOINTS.STATUS}`);
+        
+        if (response.ok) {
+          elements.apiStatus.className = "status-pill status-success";
+          elements.apiStatus.textContent = "Online";
+          return true;
+        } else {
+          elements.apiStatus.className = "status-pill status-warning";
+          elements.apiStatus.textContent = "Degraded";
+          return false;
+        }
+      } catch (error) {
+        elements.apiStatus.className = "status-pill status-danger";
+        elements.apiStatus.textContent = "Offline";
+        return false;
+      }
+    }
+    
+    // Fetch historical data for charts - MODIFIED to get more data
+    async function fetchHistoricalData() {
+      try {
+        addLogEntry("Fetching historical data for charts...", "info");
+        
+        // MODIFIED to get more data points (100 instead of 10)
+        const response = await fetch(`${API.BASE_URL}${API.ENDPOINTS.FEED}`);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        // Process and reverse the feeds to be in chronological order
+        const feeds = result.feeds.reverse();
+        
+        // Update state
+        state.historicalData = feeds;
+        
+        // Update charts
+        updateCharts();
+        
+        addLogEntry(`Loaded ${feeds.length} historical data points`, "success");
+        
+      } catch (error) {
+        console.error("Error fetching historical data:", error);
+        addLogEntry(`Error fetching historical data: ${error.message}`, "error");
+      }
+    }
+    
+    // ============================================================
+    // UI Update Functions
+    // ============================================================
+    
+    // Update UI with latest data
+    function updateUI() {
+      if (!state.data) return;
+      
+      // Update last updated time
+      elements.lastUpdated.textContent = formatDate(state.lastUpdated);
+      
+      // Temperature
+      const temperature = parseFloat(state.data.field1);
+      elements.temperatureValue.textContent = temperature.toFixed(1);
+      elements.temperatureBar.style.width = `${Math.min(100, (temperature / 50) * 100)}%`;
+      
+      // Humidity
+      const humidity = parseFloat(state.data.field2);
+      elements.humidityValue.textContent = humidity.toFixed(0);
+      elements.humidityBar.style.width = `${humidity}%`;
+      
+      // Air Quality
+      const airQuality = parseFloat(state.data.field3);
+      elements.airQualityValue.textContent = airQuality.toFixed(0);
+      const aqPercent = Math.min(100, (airQuality / 1000) * 100);
+      elements.airQualityBar.style.width = `${aqPercent}%`;
+      
+      // Update air quality status
+      updateAirQualityStatus(airQuality);
+      
+      // Motion
+      const motionDetected = parseInt(state.data.field4) === 1;
+      elements.motionValue.textContent = motionDetected ? "Active" : "Inactive";
+      
+      // Update motion status pill
+      elements.motionStatus.className = `status-pill ${motionDetected ? 'status-active' : 'status-inactive'}`;
+      elements.motionStatus.textContent = motionDetected ? "Motion Detected" : "No Motion";
+      
+      // Update motion icon
+      elements.motionIcon.className = `p-2 rounded-lg ${motionDetected ? 'bg-purple-900 text-purple-400' : 'bg-slate-700 text-slate-500'}`;
+      
+      // Last motion time
+      if (state.lastMotion) {
+        elements.lastMotionTime.textContent = formatTime(state.lastMotion);
+      }
+      
+      // RFID Status
+      const rfidTag = state.data.field5;
+      
+      if (rfidTag) {
+        elements.rfidTag.textContent = rfidTag;
+        elements.accessStatus.textContent = "Authorized Access";
+      } else {
+        elements.rfidTag.textContent = "No RFID tag detected";
+        elements.accessStatus.textContent = "No Access";
+      }
+      
+      // Last auth time
+      if (state.lastAuth) {
+        elements.lastAuthTime.textContent = formatTime(state.lastAuth);
+      }
+      
+      // Channel info
+      elements.channelId.textContent = state.data.channel_id;
+      elements.entryId.textContent = state.data.entry_id;
+      elements.createdAt.textContent = formatDate(new Date(state.data.created_at));
+      
+      // Update charts
+      updateCharts();
+      
+      // Update 3D visualization
+      update3DRoom();
+    }
+    
+    // Update Air Quality Status
+    function updateAirQualityStatus(airQuality) {
+      let status, pillClass, bgClass;
+      
+      if (airQuality < 150) {
+        status = "Good";
+        pillClass = "status-pill status-success";
+        bgClass = "bg-emerald-900 text-emerald-400";
+        elements.airQualityBar.className = "progress-fill bg-gradient-to-r from-emerald-400 to-emerald-600";
+      } else if (airQuality < 300) {
+        status = "Moderate";
+        pillClass = "status-pill status-warning";
+        bgClass = "bg-amber-900 text-amber-400";
+        elements.airQualityBar.className = "progress-fill bg-gradient-to-r from-amber-400 to-amber-600";
+      } else if (airQuality < 500) {
+        status = "Poor";
+        pillClass = "status-pill status-warning";
+        bgClass = "bg-orange-900 text-orange-400";
+        elements.airQualityBar.className = "progress-fill bg-gradient-to-r from-orange-400 to-orange-600";
+      } else {
+        status = "Bad";
+        pillClass = "status-pill status-danger";
+        bgClass = "bg-red-900 text-red-400";
+        elements.airQualityBar.className = "progress-fill bg-gradient-to-r from-red-400 to-red-600";
+      }
+      
+      elements.airQualityStatus.className = pillClass;
+      elements.airQualityStatus.textContent = status;
+      elements.airQualityIcon.className = `p-2 rounded-lg ${bgClass}`;
+    }
+    
+    // Update Refresh Button
+    function updateRefreshButton() {
+      elements.refreshButton.disabled = state.refreshing;
+      if (state.refreshing) {
+        elements.refreshButton.innerHTML = `
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2 inline-block animate-spin">
+            <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+            <path d="M3 3v5h5"></path>
+            <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"></path>
+            <path d="M16 21h5v-5"></path>
+          </svg>
+          Refreshing...
+        `;
+      } else {
+        elements.refreshButton.innerHTML = `
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2 inline-block">
+            <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+            <path d="M3 3v5h5"></path>
+            <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"></path>
+            <path d="M16 21h5v-5"></path>
+          </svg>
+          Refresh
+        `;
+      }
+    }
+    
+    // Update Connection Status
+    function updateConnectionStatus(connected) {
+      if (connected) {
+        elements.connectionStatus.className = "status-pill status-active";
+        elements.connectionStatus.innerHTML = '<span class="inline-block w-2 h-2 rounded-full bg-white mr-2"></span>Connected';
+      } else {
+        elements.connectionStatus.className = "status-pill status-inactive";
+        elements.connectionStatus.innerHTML = '<span class="inline-block w-2 h-2 rounded-full bg-white mr-2"></span>Disconnected';
+      }
+    }
+    
+    // Add Log Entry
+    function addLogEntry(message, type = "info") {
+      const date = new Date();
+      const timestamp = `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}`;
+      
+      let color;
+      let prefix;
+      
+      switch (type) {
+        case "error":
+          color = "text-red-400";
+          prefix = "ERROR";
+          break;
+        case "warning":
+          color = "text-amber-400";
+          prefix = "WARNING";
+          break;
+        case "success":
+          color = "text-emerald-400";
+          prefix = "SUCCESS";
+          break;
+        default:
+          color = "text-blue-400";
+          prefix = "INFO";
+      }
+      
+      const logEntry = document.createElement('div');
+      logEntry.className = color;
+      logEntry.innerHTML = `[${timestamp}] [${prefix}] ${message}`;
+      
+      elements.eventLogs.appendChild(logEntry);
+      elements.eventLogs.scrollTop = elements.eventLogs.scrollHeight;
+    }
+    
+    // Clear Logs
+    function clearLogs() {
+      elements.eventLogs.innerHTML = '';
+      addLogEntry("Logs cleared", "info");
+    }
+    
+    // ============================================================
+    // Chart Functions
+    // ============================================================
+    
+    // Initialize Charts - MODIFIED to fix gaps
+    function initCharts() {
+      // Common options
+      const commonOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        spanGaps: true, // NEW: Connect lines across gaps
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            mode: 'index',
+            intersect: false,
+            backgroundColor: 'rgba(30, 41, 59, 0.9)',
+            titleColor: '#94a3b8',
+            bodyColor: '#f8fafc',
+            borderColor: 'rgba(148, 163, 184, 0.2)',
+            borderWidth: 1
+          }
+        },
+        scales: {
+          x: {
+            grid: {
+              color: 'rgba(51, 65, 85, 0.3)'
+            },
+            ticks: {
+              color: '#94a3b8',
+              maxRotation: 45,
+              minRotation: 45,
+              autoSkip: false // NEW: Show all labels
+            },
+            // NEW: Better distribute data points
+            distribution: 'linear'
+          },
+          y: {
+            beginAtZero: true,
+            grid: {
+              color: 'rgba(51, 65, 85, 0.3)'
+            },
+            ticks: {
+              color: '#94a3b8'
+            }
+          }
+        },
+        elements: {
+          point: {
+            radius: 3,
+            hoverRadius: 5
+          },
+          line: {
+            tension: 0.3,
+            borderWidth: 2, // NEW: Make line more visible
+            fill: true // NEW: Ensure fill works
+          }
+        }
+      };
+      
+      // Temperature Chart
+      const tempCtx = elements.temperatureChart.getContext('2d');
+      state.temperatureChart = new Chart(tempCtx, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [{
+            label: 'Temperature (°C)',
+            data: [],
+            backgroundColor: 'rgba(14, 165, 233, 0.2)',
+            borderColor: 'rgba(14, 165, 233, 1)',
+            fill: true
+          }]
+        },
+        options: {
+          ...commonOptions,
+          scales: {
+            ...commonOptions.scales,
+            y: {
+              ...commonOptions.scales.y,
+              title: {
+                display: true,
+                text: 'Temperature (°C)',
+                color: '#94a3b8'
+              }
+            }
+          }
+        }
+      });
+      
+      // Humidity Chart
+      const humCtx = elements.humidityChart.getContext('2d');
+      state.humidityChart = new Chart(humCtx, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [{
+            label: 'Humidity (%)',
+            data: [],
+            backgroundColor: 'rgba(168, 85, 247, 0.2)',
+            borderColor: 'rgba(168, 85, 247, 1)',
+            fill: true
+          }]
+        },
+        options: {
+          ...commonOptions,
+          scales: {
+            ...commonOptions.scales,
+            y: {
+              ...commonOptions.scales.y,
+              title: {
+                display: true,
+                text: 'Humidity (%)',
+                color: '#94a3b8'
+              },
+              max: 100
+            }
+          }
+        }
+      });
+      
+      // Air Quality Chart
+      const aqCtx = elements.airQualityChart.getContext('2d');
+      state.airQualityChart = new Chart(aqCtx, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [{
+            label: 'Air Quality Index',
+            data: [],
+            backgroundColor: 'rgba(16, 185, 129, 0.2)',
+            borderColor: 'rgba(16, 185, 129, 1)',
+            fill: true
+          }]
+        },
+        options: {
+          ...commonOptions,
+          scales: {
+            ...commonOptions.scales,
+            y: {
+              ...commonOptions.scales.y,
+              title: {
+                display: true,
+                text: 'Air Quality Index',
+                color: '#94a3b8'
+              }
+            }
+          }
+        }
+      });
+    }
+    
+    // Update Charts with Historical Data
+    function updateCharts() {
+      if (!state.temperatureChart || !state.humidityChart || !state.airQualityChart || !state.historicalData.length) return;
+      
+      // Format data for charts
+      const labels = state.historicalData.map(entry => {
+        const date = new Date(entry.created_at);
+        return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+      });
+      
+      const temperatureData = state.historicalData.map(entry => parseFloat(entry.field1));
+      const humidityData = state.historicalData.map(entry => parseFloat(entry.field2));
+      const airQualityData = state.historicalData.map(entry => parseFloat(entry.field3));
+      
+      // Update temperature chart
+      state.temperatureChart.data.labels = labels;
+      state.temperatureChart.data.datasets[0].data = temperatureData;
+      state.temperatureChart.update();
+      
+      // Update humidity chart
+      state.humidityChart.data.labels = labels;
+      state.humidityChart.data.datasets[0].data = humidityData;
+      state.humidityChart.update();
+      
+      // Update air quality chart
+      state.airQualityChart.data.labels = labels;
+      state.airQualityChart.data.datasets[0].data = airQualityData;
+      state.airQualityChart.update();
+    }
+    
+    // ============================================================
+    // 3D Room Visualization
+    // ============================================================
+    
+    // Initialize 3D Room
+    function init3DRoom() {
+      const container = elements.roomContainer;
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+      
+      // Create scene
+      state.scene = new THREE.Scene();
+      state.scene.background = new THREE.Color(0x0f172a);
+      
+      // Create camera
+      state.camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
+      state.camera.position.set(0, 1.5, 3);
+      
+      // Create renderer
+      state.renderer = new THREE.WebGLRenderer({ antialias: true });
+      state.renderer.setSize(width, height);
+      state.renderer.shadowMap.enabled = true;
+      container.appendChild(state.renderer.domElement);
+      
+      // Create orbit controls
+      state.controls = new THREE.OrbitControls(state.camera, state.renderer.domElement);
+      state.controls.enableDamping = true;
+      state.controls.dampingFactor = 0.25;
+      state.controls.enableZoom = true;
+      state.controls.minDistance = 2;
+      state.controls.maxDistance = 10;
+      
+      // Add lights
+      const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
+      state.scene.add(ambientLight);
+      
+      const pointLight = new THREE.PointLight(0xffffff, 1);
+      pointLight.position.set(0, 2, 2);
+      pointLight.castShadow = true;
+      state.scene.add(pointLight);
+      
+      // Create room
+      createRoom();
+      
+      // Start animation loop
+      animate();
+    }
+    
+    // Create Room
+    function createRoom() {
+      // Create room group
+      state.room = new THREE.Group();
+      
+      // Room dimensions
+      const roomWidth = 4;
+      const roomLength = 4;
+      const roomHeight = 3;
+      
+      // Floor
+      const floorGeometry = new THREE.PlaneGeometry(roomWidth, roomLength);
+      const floorMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0x334155,
+        roughness: 0.8,
+        metalness: 0.2
+      });
+      const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+      floor.rotation.x = -Math.PI / 2;
+      floor.receiveShadow = true;
+      state.room.add(floor);
+      
+      // Walls
+      const wallMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0x1e293b,
+        roughness: 0.9,
+        metalness: 0.1
+      });
+      
+      // Back wall
+      const backWallGeometry = new THREE.PlaneGeometry(roomWidth, roomHeight);
+      const backWall = new THREE.Mesh(backWallGeometry, wallMaterial);
+      backWall.position.z = -roomLength / 2;
+      backWall.position.y = roomHeight / 2;
+      backWall.receiveShadow = true;
+      state.room.add(backWall);
+      
+      // Left wall
+      const leftWallGeometry = new THREE.PlaneGeometry(roomLength, roomHeight);
+      const leftWall = new THREE.Mesh(leftWallGeometry, wallMaterial);
+      leftWall.position.x = -roomWidth / 2;
+      leftWall.position.y = roomHeight / 2;
+      leftWall.rotation.y = Math.PI / 2;
+      leftWall.receiveShadow = true;
+      state.room.add(leftWall);
+      
+      // Right wall
+      const rightWallGeometry = new THREE.PlaneGeometry(roomLength, roomHeight);
+      const rightWall = new THREE.Mesh(rightWallGeometry, wallMaterial);
+      rightWall.position.x = roomWidth / 2;
+      rightWall.position.y = roomHeight / 2;
+      rightWall.rotation.y = -Math.PI / 2;
+      rightWall.receiveShadow = true;
+      state.room.add(rightWall);
+      
+      // Ceiling
+      const ceilingGeometry = new THREE.PlaneGeometry(roomWidth, roomLength);
+      const ceilingMaterial = new THREE.MeshStandardMaterial({ color: 0x0f172a });
+      const ceiling = new THREE.Mesh(ceilingGeometry, ceilingMaterial);
+      ceiling.position.y = roomHeight;
+      ceiling.rotation.x = Math.PI / 2;
+      ceiling.receiveShadow = true;
+      state.room.add(ceiling);
+      
+      // Add sensor objects
+      
+      // Temperature sensor (red box)
+      const tempGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+      const tempMaterial = new THREE.MeshStandardMaterial({ color: 0xef4444 });
+      const tempSensor = new THREE.Mesh(tempGeometry, tempMaterial);
+      tempSensor.position.set(-1.5, 1.5, -1.8);
+      tempSensor.castShadow = true;
+      tempSensor.name = "tempSensor";
+      state.room.add(tempSensor);
+      
+      // Humidity sensor (blue box)
+      const humGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+      const humMaterial = new THREE.MeshStandardMaterial({ color: 0x0ea5e9 });
+      const humSensor = new THREE.Mesh(humGeometry, humMaterial);
+      humSensor.position.set(-1.5, 1.8, -1.8);
+      humSensor.castShadow = true;
+      humSensor.name = "humSensor";
+      state.room.add(humSensor);
+      
+      // Air quality sensor (green box)
+      const aqGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+      const aqMaterial = new THREE.MeshStandardMaterial({ color: 0x10b981 });
+      const aqSensor = new THREE.Mesh(aqGeometry, aqMaterial);
+      aqSensor.position.set(-1.5, 2.1, -1.8);
+      aqSensor.castShadow = true;
+      aqSensor.name = "aqSensor";
+      state.room.add(aqSensor);
+      
+      // Motion sensor (purple sphere)
+      const motionGeometry = new THREE.SphereGeometry(0.1, 16, 16);
+      const motionMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0xa855f7,
+        emissive: 0xa855f7,
+        emissiveIntensity: 0.2
+      });
+      const motionSensor = new THREE.Mesh(motionGeometry, motionMaterial);
+      motionSensor.position.set(1.5, 2.2, -1.8);
+      motionSensor.castShadow = true;
+      motionSensor.name = "motionSensor";
+      state.room.add(motionSensor);
+      
+      // RFID reader
+      const rfidGeometry = new THREE.BoxGeometry(0.3, 0.2, 0.05);
+      const rfidMaterial = new THREE.MeshStandardMaterial({ color: 0xf59e0b });
+      const rfidReader = new THREE.Mesh(rfidGeometry, rfidMaterial);
+      rfidReader.position.set(0, 1.2, -1.95);
+      rfidReader.castShadow = true;
+      rfidReader.name = "rfidReader";
+      state.room.add(rfidReader);
+      
+      // Light source
+      const lightGeometry = new THREE.CylinderGeometry(0.2, 0.2, 0.05, 32);
+      const lightMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0xffffff,
+        emissive: 0xffffff,
+        emissiveIntensity: 0.5
+      });
+      const lightFixture = new THREE.Mesh(lightGeometry, lightMaterial);
+      lightFixture.position.set(0, 2.95, 0);
+      lightFixture.rotation.x = Math.PI / 2;
+      lightFixture.name = "light";
+      state.room.add(lightFixture);
+      
+      // Fan
+      const fanBaseGeometry = new THREE.CylinderGeometry(0.2, 0.2, 0.05, 32);
+      const fanBaseMaterial = new THREE.MeshStandardMaterial({ color: 0x64748b });
+      const fanBase = new THREE.Mesh(fanBaseGeometry, fanBaseMaterial);
+      fanBase.position.set(0, 2.9, 0);
+      fanBase.rotation.x = Math.PI / 2;
+      fanBase.name = "fanBase";
+      state.room.add(fanBase);
+      
+      // Fan blades
+      const fanGroup = new THREE.Group();
+      fanGroup.position.set(0, 2.85, 0);
+      fanGroup.name = "fanBlades";
+      
+      const bladeGeometry = new THREE.BoxGeometry(0.6, 0.1, 0.02);
+      const bladeMaterial = new THREE.MeshStandardMaterial({ color: 0xf8fafc });
+      
+      for (let i = 0; i < 4; i++) {
+        const blade = new THREE.Mesh(bladeGeometry, bladeMaterial);
+        blade.rotation.z = (Math.PI / 2) * i;
+        fanGroup.add(blade);
+      }
+      
+      state.room.add(fanGroup);
+      
+      // Add room to scene
+      state.scene.add(state.room);
+    }
+    
+    // Update 3D Room Based on Sensor Data
+    function update3DRoom() {
+      if (!state.room || !state.data) return;
+      
+      // Extract data
+      const temperature = parseFloat(state.data.field1);
+      const humidity = parseFloat(state.data.field2);
+      const airQuality = parseFloat(state.data.field3);
+      const motionDetected = parseInt(state.data.field4) === 1;
+      const rfidTag = state.data.field5;
+      
+      // Update temperature sensor - color based on temperature
+      const tempSensor = state.room.getObjectByName('tempSensor');
+      if (tempSensor) {
+        let tempColor;
+        if (temperature < 18) {
+          tempColor = new THREE.Color(0x0ea5e9); // Cool blue
+        } else if (temperature < 25) {
+          tempColor = new THREE.Color(0x10b981); // Green
+        } else if (temperature < 30) {
+          tempColor = new THREE.Color(0xf59e0b); // Orange
+        } else {
+          tempColor = new THREE.Color(0xef4444); // Red
+        }
+        tempSensor.material.color = tempColor;
+        tempSensor.material.emissive = tempColor;
+        tempSensor.material.emissiveIntensity = 0.5;
+      }
+      
+      // Update humidity sensor - intensity based on humidity
+      const humSensor = state.room.getObjectByName('humSensor');
+      if (humSensor) {
+        const intensity = Math.max(0.2, humidity / 100);
+        humSensor.material.emissiveIntensity = intensity;
+      }
+      
+      // Update air quality sensor - color based on air quality
+      const aqSensor = state.room.getObjectByName('aqSensor');
+      if (aqSensor) {
+        let aqColor;
+        if (airQuality < 150) {
+          aqColor = new THREE.Color(0x10b981); // Green
+        } else if (airQuality < 300) {
+          aqColor = new THREE.Color(0xf59e0b); // Orange
+        } else if (airQuality < 500) {
+          aqColor = new THREE.Color(0xf97316); // Dark orange
+        } else {
+          aqColor = new THREE.Color(0xef4444); // Red
+        }
+        aqSensor.material.color = aqColor;
+        aqSensor.material.emissive = aqColor;
+        aqSensor.material.emissiveIntensity = 0.5;
+      }
+      
+      // Update motion sensor - pulse if motion detected
+      const motionSensor = state.room.getObjectByName('motionSensor');
+      if (motionSensor) {
+        if (motionDetected) {
+          motionSensor.material.emissiveIntensity = Math.abs(Math.sin(Date.now() * 0.005)) * 0.8 + 0.2;
+        } else {
+          motionSensor.material.emissiveIntensity = 0.2;
+        }
+      }
+      
+      // Update RFID reader - glow if tag detected
+      const rfidReader = state.room.getObjectByName('rfidReader');
+      if (rfidReader) {
+        if (rfidTag) {
+          rfidReader.material.emissive = new THREE.Color(0xf59e0b);
+          rfidReader.material.emissiveIntensity = Math.abs(Math.sin(Date.now() * 0.003)) * 0.8 + 0.2;
+        } else {
+          rfidReader.material.emissive = new THREE.Color(0x000000);
+          rfidReader.material.emissiveIntensity = 0;
+        }
+      }
+      
+      // Update light - brightness based on motion
+      const light = state.room.getObjectByName('light');
+      if (light) {
+        light.material.emissiveIntensity = motionDetected ? 0.8 : 0.2;
+      }
+      
+      // Update fan - rotation based on temperature
+      const fanBlades = state.room.getObjectByName('fanBlades');
+      if (fanBlades) {
+        // Rotate if temperature is high enough and motion is detected
+        if (temperature > 25 && motionDetected) {
+          fanBlades.rotation.z += 0.05;
+        }
+      }
+    }
+    
+    // Handle Window Resize
+    function onWindowResize() {
+      if (!state.camera || !state.renderer || !elements.roomContainer) return;
+      
+      const width = elements.roomContainer.clientWidth;
+      const height = elements.roomContainer.clientHeight;
+      
+      state.camera.aspect = width / height;
+      state.camera.updateProjectionMatrix();
+      state.renderer.setSize(width, height);
+    }
+    
+    // Animation Loop
+    function animate() {
+      requestAnimationFrame(animate);
+      
+      if (state.controls) {
+        state.controls.update();
+      }
+      
+      if (state.renderer && state.scene && state.camera) {
+        state.renderer.render(state.scene, state.camera);
+      }
+    }
+    
+    // ============================================================
+    // Utility Functions
+    // ============================================================
+    
+    // Format Date
+    function formatDate(date) {
+      if (!date) return '--';
+      
+      return date.toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+    }
+    
+    // Format Time
+    function formatTime(date) {
+      if (!date) return '--:--:--';
+      
+      return date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      });
+    }
+    
+    // Update Clock
+    function updateClock() {
+      const now = new Date();
+      elements.currentTime.textContent = formatTime(now);
+    }
+    
+    // ============================================================
+    // Event Listeners
+    // ============================================================
+    
+    // Set up event listeners
+    function setupEventListeners() {
+      // Refresh button
+      elements.refreshButton.addEventListener('click', () => {
+        if (!state.refreshing) {
+          fetchData();
+        }
+      });
+      
+      // Retry button
+      elements.retryButton.addEventListener('click', () => {
+        elements.errorOverlay.classList.add('hidden');
+        fetchData();
+      });
+      
+      // Clear logs button
+      elements.clearLogsBtn.addEventListener('click', clearLogs);
+      
+      // Room rotation buttons
+      elements.rotateLeftBtn.addEventListener('click', () => {
+        if (state.room) {
+          state.room.rotation.y -= Math.PI / 8;
+        }
+      });
+      
+      elements.rotateRightBtn.addEventListener('click', () => {
+        if (state.room) {
+          state.room.rotation.y += Math.PI / 8;
+        }
+      });
+      
+      // Chart detail buttons
+      document.getElementById('temperature-history-btn').addEventListener('click', () => {
+        fetchHistoricalData();
+      });
+      
+      document.getElementById('humidity-history-btn').addEventListener('click', () => {
+        fetchHistoricalData();
+      });
+      
+      document.getElementById('air-quality-history-btn').addEventListener('click', () => {
+        fetchHistoricalData();
+      });
+      
+      document.getElementById('air-quality-history-btn').addEventListener('click', () => {
+        fetchHistoricalData();
+      });
+      
+      // Mobile menu
+      elements.mobileMenuItems.forEach(item => {
+        item.addEventListener('click', (e) => {
+          e.preventDefault();
+          
+          // Remove active class from all items
+          elements.mobileMenuItems.forEach(i => i.classList.remove('active'));
+          
+          // Add active class to clicked item
+          item.classList.add('active');
+          
+          // Scroll to section
+          const section = item.dataset.section;
+          switch (section) {
+            case 'dashboard':
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+              break;
+            case 'charts':
+              document.getElementById('temperature-chart').scrollIntoView({ behavior: 'smooth' });
+              break;
+            case 'visualization':
+              document.getElementById('room-3d-container').scrollIntoView({ behavior: 'smooth' });
+              break;
+            case 'logs':
+              document.getElementById('event-logs').scrollIntoView({ behavior: 'smooth' });
+              break;
+          }
+        });
+      });
+      
+      // Window resize event
+      window.addEventListener('resize', onWindowResize);
+    }
+    
+    // ============================================================
+    // Initialization
+    // ============================================================
+    
+    // Initialize app
+    async function init() {
+      // Add initial log entry
+      addLogEntry("Starting Smart Room dashboard...", "info");
+      
+      // Set up event listeners
+      setupEventListeners();
+      
+      // Start clock
+      updateClock();
+      setInterval(updateClock, 1000);
+      
+      // Initialize charts
+      initCharts();
+      
+      // Initialize 3D room
+      init3DRoom();
+      
+      // Fetch initial data
+      try {
+        await fetchData();
+        addLogEntry("Dashboard initialized successfully", "success");
+      } catch (error) {
+        console.error("Error during initialization:", error);
+        addLogEntry(`Initialization error: ${error.message}`, "error");
+      }
+      
+      // Set up periodic data refresh (every 30 seconds)
+      setInterval(fetchData, 30000);
+    }
+    
+    // Initialize when DOM is loaded
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
